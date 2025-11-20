@@ -1,0 +1,45 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Agrim - Cyber Complaint Generator</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="container">
+    <aside class="sidebar">
+      <img src="/images/agrim-logo.png" class="logo" alt="Agrim">
+      <h3>Agrim Fincap</h3>
+      <nav>
+        <a href="/">Dashboard</a>
+        <a href="/view-letters">Generated Letters</a>
+        <a href="/download-template">Download Excel Template</a>
+        <a href="/download-logs">Download Logs</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <h2>Cyber Fraud Complaint Generator</h2>
+      </header>
+
+      <section class="content card">
+        <h3>Upload Excel & Generate Complaint PDFs</h3>
+
+        <div class="single-col">
+          <h4>Excel Upload</h4>
+          <p>Upload .xlsx with correct columns</p>
+
+          <form action="/upload-excel" method="POST" enctype="multipart/form-data">
+            <input type="file" name="excel" accept=".xlsx" required>
+            <button class="btn primary">Upload & Preview</button>
+          </form>
+
+          <p class="muted">Use the template for correct columns.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
