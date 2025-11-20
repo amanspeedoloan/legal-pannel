@@ -7,9 +7,13 @@
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <div class="container">
+  <div class="dashboard-container">
+
+    <!-- SIDEBAR -->
     <aside class="sidebar">
-      <img src="/images/agrim-logo.png" class="logo" alt="Agrim">
+      <div class="logo-box">
+        <img src="/images/agrim-logo.png" class="logo" alt="Agrim">
+      </div>
       <h3>Agrim Fincap</h3>
       <nav>
         <a href="/">Dashboard</a>
@@ -19,6 +23,7 @@
       </nav>
     </aside>
 
+    <!-- MAIN CONTENT -->
     <main class="main">
       <header class="topbar">
         <h2>Cyber Fraud Complaint Generator</h2>
@@ -32,14 +37,17 @@
           <p>Upload .xlsx with correct columns</p>
 
           <form action="/upload-excel" method="POST" enctype="multipart/form-data">
-            <input type="file" name="excel" accept=".xlsx" required>
-            <button class="btn primary">Upload & Preview</button>
+            <div class="upload-box">
+              <input type="file" name="excel" accept=".xlsx" required>
+            </div>
+            <button class="btn primary" style="margin-top:15px">Upload & Preview</button>
           </form>
 
           <p class="muted">Use the template for correct columns.</p>
         </div>
       </section>
     </main>
+
   </div>
 </body>
 </html>

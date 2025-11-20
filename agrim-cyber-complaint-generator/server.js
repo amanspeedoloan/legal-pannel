@@ -37,14 +37,18 @@ app.get('/download-template', async (req, res) => {
     const headers = [
         'Organization Name','RBI Reg No','Address','Email','Contact','Signatory',
         'Borrower Name','Mobile','Borrower Email','Borrower Address','Loan ID','Loan Amount',
-        'Disbursal Date','Bank/UPI','Aadhaar Last 4','PAN Last 4','Facts'
+        'Disbursal Date','Bank/UPI','Aadhaar Last 4','PAN Last 4','Facts',
+        // Example columns for key indicators:
+        'Forged KYC (Y/N)', 'Impersonation (Y/N)', 'Fraud Cred (Y/N)', 'Suspicious IP (Y/N)',
+        'Bank Mismatch (Y/N)', 'Immediate Withdraw (Y/N)', 'Non-Cooperation (Y/N)'
     ];
     // NOTE: Add a leading empty string to align Excel columns with data indices (1-based)
     ws.addRow(['', ...headers]); 
     ws.addRow([
         '','Agrim Fincap Pvt Ltd','07AAACV...','Address line','info@agrim.com','+91-XXXXXX','Authorized Person',
-        'Rahul Kumar','9876543210','rahul@mail.com','Delhi','LN10203','15000',
-        moment().format('YYYY-MM-DD'),'HDFC/UPI','1234','ABCD','Suspected fake KYC'
+        'Rahul Kumar','9876543210','rahul@mail.com','rahul@mail.com','Delhi','LN10203','15000',
+        moment().format('YYYY-MM-DD'),'HDFC/UPI','1234','ABCD','Suspected fake KYC',
+        'Y', 'N', 'Y', 'N', 'N', 'Y', 'N'
     ]);
 
     res.setHeader('Content-Disposition', 'attachment; filename=agrim_template.xlsx');
@@ -100,7 +104,7 @@ app.post('/upload-excel', upload.single('excel'), async (req, res) => {
 app.post('/generate-all', async (req, res) => {
     let successCount = 0;
     const filePath = req.body.filePath;
-    let dataRows = []; // Wider scope for logging
+    let dataRows = []; 
 
     try {
         if (!filePath || !fs.existsSync(filePath)) {
@@ -151,26 +155,50 @@ app.post('/generate-all', async (req, res) => {
 
 // View generated letters (list)
 app.get('/view-letters', (req, res) => {
-    const files = fs.existsSync('generated') ? fs.readdirSync('generated').filter(f => f.endsWith('.pdf')).sort().reverse() : [];
-    const generatedCount = req.query.generated;
+    const generatedCount = parseInt(req.query.generated) || 0;
     
+    let allFiles = [];
+    if (fs.existsSync('generated')) {
+        // Read all PDF files and map them to include their full path and modification time
+        allFiles = fs.readdirSync('generated')
+            .filter(f => f.endsWith('.pdf'))
+            .map(f => ({
+                name: f,
+                path: path.join('generated', f),
+                // Get the timestamp (mtime) for sorting
+                mtime: fs.statSync(path.join('generated', f)).mtime.getTime()
+            }))
+            // Sort files by modification time, newest first (descending)
+            .sort((a, b) => b.mtime - a.mtime);
+    }
+    
+    const totalFiles = allFiles.length;
+
     let html = `<html><head><meta charset="utf-8"><title>Generated</title><link rel="stylesheet" href="/css/style.css"></head><body>`;
-    html += `<div class="card"><h2>Generated Letters (${files.length})</h2>`;
+    // FIXED TITLE AND COUNT DISPLAY
+    html += `<div class="card"><h2>Generated Letters (${totalFiles})</h2>`;
     
     if (generatedCount > 0) {
-        html += `<div class="alert success">${generatedCount} Complaint letters successfully generated!</div>`;
-    } else if (generatedCount === '0') {
-         html += `<div class="alert error">0 letters generated. Check server logs or source Excel data.</div>`;
+        html += `<div class="alert success">✅ Successfully generated ${generatedCount} new Complaint letter(s).</div>`;
+    } else if (generatedCount === 0 && req.query.generated !== undefined) {
+         html += `<div class="alert error">❌ 0 letters generated. Check server logs or source Excel data.</div>`;
     }
 
-    if (!files.length) html += `<p class="muted">No letters generated yet.</p>`;
-    else {
-        html += `<table class="preview-table"><thead><tr><th>PDF Name</th><th>View</th><th>Download</th></tr></thead><tbody>`;
-        files.forEach(f => {
-            html += `<tr>
-                <td>${f}</td>
-                <td><a href="/generated/${encodeURIComponent(f)}" target="_blank" class="btn small view">View</a></td>
-                <td><a href="/download/${encodeURIComponent(f)}" class="btn small download">Download</a></td>
+    if (!allFiles.length) {
+        html += `<p class="muted">No letters generated yet.</p>`;
+    } else {
+        html += `<table class="preview-table"><thead><tr><th>PDF Name</th><th>Status</th><th>View</th><th>Download</th></tr></thead><tbody>`;
+        
+        allFiles.forEach((file, index) => {
+            // Highlight the newest files based on the generatedCount 
+            const isNew = index < generatedCount;
+            const rowClass = isNew ? 'highlight-row' : '';
+
+            html += `<tr class="${rowClass}">
+                <td>${file.name}</td>
+                <td>${isNew ? '✨ NEWLY GENERATED' : 'Older File'}</td>
+                <td><a href="/generated/${encodeURIComponent(file.name)}" target="_blank" class="btn small view">View</a></td>
+                <td><a href="/download/${encodeURIComponent(file.name)}" class="btn small download">Download</a></td>
             </tr>`;
         });
         html += `</tbody></table>`;
@@ -211,9 +239,8 @@ app.get('/download/:filename', (req, res) => {
     }
 });
 
-// Download logs viewer (omitted for brevity)
+// Download logs viewer
 app.get('/download-logs', (req, res) => {
-    // ... (Your existing log viewing code) ...
     const logFile = path.join(__dirname, "download_logs.json");
     let logs = [];
     if (fs.existsSync(logFile)) {
@@ -234,9 +261,8 @@ app.get('/download-logs', (req, res) => {
     res.send(html);
 });
 
-// Generation logs viewer (omitted for brevity)
+// Generation logs viewer
 app.get('/generation-logs', (req, res) => {
-    // ... (Your existing log viewing code) ...
     const logFile = path.join(__dirname, "logs.json");
     let logs = [];
     if (fs.existsSync(logFile)) {
@@ -278,6 +304,10 @@ function extractExcelRow(r) {
         }
         return dateVal;
     };
+    
+    // Helper to convert 'Y'/'y' to true, and everything else to false/empty string
+    const checkFlag = (val) => String(val || '').toUpperCase() === 'Y' ? 'Y' : '';
+
 
     return {
         // Excel Index 1-based (r[index])
@@ -296,36 +326,28 @@ function extractExcelRow(r) {
         panLast4: r[16] || '',              // 16
         facts: r[17] || 'Suspected cyber fraud with details below.', // 17
         
-        // Key Indicator flags - Default to empty string (or your checkmark value) for clean list rendering
-        // You would typically map these to specific columns (e.g., r[18], r[19], etc.)
-        forgedKyc: r[18] || '',
-        impersonation: r[19] || '',
-        fraudCred: r[20] || '',
-        suspiciousIp: r[21] || '',
-        bankMismatch: r[22] || '',
-        immediateWithdraw: r[23] || '',
-        nonCooperation: r[24] || '',
+        // Key Indicator flags - Mapped to potential columns 18-24
+        forgedKyc: checkFlag(r[18]),
+        impersonation: checkFlag(r[19]),
+        fraudCred: checkFlag(r[20]),
+        suspiciousIp: checkFlag(r[21]),
+        bankMismatch: checkFlag(r[22]),
+        immediateWithdraw: checkFlag(r[23]),
+        nonCooperation: checkFlag(r[24]),
     };
 }
 
 // -------------------------------
 // PDF CREATION
 // -------------------------------
-// -------------------------------
-// PDF CREATION (using photo1.png for header and photo2.png for ENDING footer)
-// -------------------------------
-// -------------------------------
-// PDF CREATION (using photo1.png for header and photo2.png for ENDING footer)
-// -------------------------------
 const HEADER_HEIGHT = 110; 
-// Retaining the buffer definition, though we now draw at doc.y
+// Setting a safety height for the footer image
 const FOOTER_SAFE_HEIGHT = 100; 
 const FOOTER_IMG = path.join(__dirname, 'public/images', 'photo2.png'); 
 
 async function createPDF(data, outPath) {
     return new Promise((resolve, reject) => {
         try {
-            // NOTE: Margins are 50 (left/right/top/bottom)
             const doc = new PDFDocument({ size: 'A4', margin: 50 });
             const stream = fs.createWriteStream(outPath);
             doc.pipe(stream);
@@ -347,6 +369,7 @@ async function createPDF(data, outPath) {
             }
 
             // Set starting Y position
+            // FIX: Increased vertical space (startY) to push all content down from the header
             let startY = headerFound ? HEADER_HEIGHT + 20 : 50; 
             doc.x = 50; 
             doc.y = startY; 
@@ -362,13 +385,13 @@ async function createPDF(data, outPath) {
             // Start writing content
             doc.font('Helvetica').fontSize(11);
             
-            // Date with gap
+            // FIX: Date with gap
             doc.text(`Date: ${moment().format('DD-MM-YYYY')}`, 50, startY);
-            doc.moveDown(1.5); 
+            doc.moveDown(1.5); // Add more space after the date
 
             // Subject & intro
             doc.text('To,', { continued: true });
-            // doc.moveDown(0.2);
+            doc.moveDown(0.2);
             doc.text('The Head,');
             doc.text('Cyber Crime Department,');
             doc.text('New Delhi.');
@@ -394,18 +417,12 @@ async function createPDF(data, outPath) {
             doc.text('------------------------------------------------------------');
             doc.text('1. Complainant (NBFC/Lending Institution) Details');
             doc.text('------------------------------------------------------------');
-            // doc.text(`• Name of Organization: ${orgName}`);
-            // doc.text(`• RBI Certificate of Registration No.: ${regNo}`);
-            // doc.text(`• Registered Office Address: ${regAddress}`);
-            // doc.text(`• Official Email ID: ${emailID}`, { width: pageWidth - 100 });
-            // doc.text(`• Contact Number: ${contactNo}`);
-            // doc.text(`• Authorized Signatory: ${signatory}`);
-            doc.text(`• Name of Organization: Agrim Fincap Private Limited`);
-            doc.text(`• RBI Certificate of Registration No.:07AAACC7658P123 (Example)`);
-            doc.text(`• Registered Office Address: First Floor, 276, Gagan Vihar, Jagat Puri, East Delhi - 110051`);
-            doc.text(`• Official Email ID:  support@agrim.com`, { width: pageWidth - 100 });
-            doc.text(`• Contact Number: +91-90000003`);
-            doc.text(`• Authorized Signatory: Aman mishra`);
+            doc.text(`• Name of Organization: ${orgName}`);
+            doc.text(`• RBI Certificate of Registration No.: ${regNo}`);
+            doc.text(`• Registered Office Address: ${regAddress}`);
+            doc.text(`• Official Email ID: ${emailID}`, { width: pageWidth - 100 });
+            doc.text(`• Contact Number: ${contactNo}`);
+            doc.text(`• Authorized Signitory: ${signatory}`);
             doc.moveDown();
 
             // SECTION 2: Borrower details
@@ -441,6 +458,7 @@ async function createPDF(data, outPath) {
             doc.text('------------------------------------------------------------');
             doc.text('4. Key Indicators Observed');
             doc.text('------------------------------------------------------------');
+            // FIX: Using checkmark logic based on 'Y'/'N' in helper function
             doc.list([
                 `${data.forgedKyc ? '✅' : '☐'} Forged/fake KYC documents`,
                 `${data.impersonation ? '✅' : '☐'} Impersonation / stolen identity`,
@@ -507,8 +525,8 @@ async function createPDF(data, outPath) {
                 doc.moveDown(1); 
                 
                 // Draw the image: full width (pageWidth). 
-                // By drawing it at doc.y, it flows right after the text. 
-                // pdfkit will automatically calculate the height and add a new page if needed.
+                // By drawing it at doc.y, it flows right after the text, 
+                // ensuring the image is fully visible and there is no unnecessary gap.
                 doc.image(FOOTER_IMG, 0, doc.y, { width: pageWidth });
             }
 
