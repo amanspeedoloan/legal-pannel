@@ -7,39 +7,99 @@
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
-  <div class="container">
+  <div class="dashboard-container">
+
+    <!-- SIDEBAR -->
     <aside class="sidebar">
-      <img src="/images/agrim-logo.png" class="logo" alt="Agrim">
+      <div class="logo-box">
+        <img src="/images/agrim-logo.png" class="logo" alt="Agrim">
+      </div>
       <h3>Agrim Fincap</h3>
       <nav>
         <a href="/">Dashboard</a>
         <a href="/view-letters">Generated Letters</a>
-        <a href="/download-template">Download Excel Template</a>
         <a href="/download-logs">Download Logs</a>
+        <a href="/generation-logs">Generation Logs</a>
       </nav>
+      <div class="sidebar-footer">
+        <small>Version: <strong>1.0</strong></small>
+      </div>
     </aside>
 
+    <!-- MAIN CONTENT -->
     <main class="main">
+      <!-- Gradient header bar -->
       <header class="topbar">
-        <h2>Cyber Fraud Complaint Generator</h2>
+        <div class="topbar-left">
+          <h2>Cyber Fraud Complaint Generator</h2>
+          <p class="muted small">Upload an Excel, preview rows and generate complaint PDFs.</p>
+        </div>
+        <div class="topbar-right">
+          <div id="uploadStatus" class="upload-status muted small"></div>
+        </div>
       </header>
 
+      <!-- Big white card -->
       <section class="content card">
-        <h3>Upload Excel & Generate Complaint PDFs</h3>
+        <div class="content-grid">
 
-        <div class="single-col">
-          <h4>Excel Upload</h4>
-          <p>Upload .xlsx with correct columns</p>
+          <!-- LEFT: Upload area -->
+          <div class="single-col">
+            <h3>Upload Excel &amp; Generate Complaint PDFs</h3>
 
-          <form action="/upload-excel" method="POST" enctype="multipart/form-data">
-            <input type="file" name="excel" accept=".xlsx" required>
-            <button class="btn primary">Upload & Preview</button>
-          </form>
+            <div class="upload-area" id="uploadArea">
+              <form id="uploadForm" action="/upload-excel" method="POST" enctype="multipart/form-data">
+                <label class="file-drop" for="excelInput">
+                  <input id="excelInput" type="file" name="excel" accept=".xlsx" required>
+                  <div class="file-drop-inner">
+                    <strong>Drag &amp; drop an .xlsx file here</strong>
+                    <span class="muted">or click to browse — use the provided template for correct columns</span>
+                    <div id="selectedFile" class="selected-file muted"></div>
+                  </div>
+                </label>
 
-          <p class="muted">Use the template for correct columns.</p>
+                <div class="upload-actions">
+                  <button type="submit" class="btn primary" id="uploadBtn">Upload &amp; Preview</button>
+                </div>
+              </form>
+            </div>
+
+            <p class="muted tip">Tip: Use the template for correct column order. Empty rows will be skipped.</p>
+          </div>
+
+          <!-- RIGHT: Quick actions + preview text -->
+          <aside class="panel-right">
+            <div class="card mini">
+              <h4>Quick Actions</h4>
+              <div class="action-list">
+                <a href="/view-letters" class="action-link">View Generated Letters</a>
+                <a href="/download-logs" class="action-link">View Download Logs</a>
+                <a href="/generation-logs" class="action-link">View Generation Logs</a>
+              </div>
+            </div>
+
+            <div class="card mini">
+              <h4>Preview</h4>
+              <p class="muted small">
+                After uploading you’ll see a preview page where you can generate PDFs and review extracted fields.
+              </p>
+            </div>
+
+            <div class="card mini ghost">
+              <!-- <a href="/" class="back-link">← Back to Dashboard</a> -->
+            </div>
+          </aside>
+
         </div>
       </section>
+
+      <footer class="footer muted small">
+        Made with ❤️ by Agrim
+      </footer>
     </main>
+
   </div>
+
+  <script src="/js/main.js"></script>
 </body>
 </html>
